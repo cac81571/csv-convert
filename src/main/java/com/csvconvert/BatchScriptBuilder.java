@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li>JAR path is relative to the bat file ({@code cd /d "%~dp0"}).</li>
  *   <li>Input is the first argument ({@code %1}), for drag-and-drop.</li>
- *   <li>Output is {@code <inputName>_conv.<ext>} beside the input.</li>
+ *   <li>Output is {@code <prefix><inputName><suffix>.<ext>} beside the input.</li>
  * </ul>
  */
 public final class BatchScriptBuilder {
@@ -42,7 +42,7 @@ public final class BatchScriptBuilder {
         bat.append(")\r\n");
         bat.append("\r\n");
         bat.append("set \"").append(INPUT_VAR).append("=%~1\"\r\n");
-        bat.append("set \"").append(OUTPUT_VAR).append("=%~dpn1_conv%~x1\"\r\n");
+        bat.append("set \"").append(OUTPUT_VAR).append("=").append(outputPathExpression(config)).append("\"\r\n");
         bat.append("\r\n");
         bat.append("echo Input : %").append(INPUT_VAR).append("%\r\n");
         bat.append("echo Output: %").append(OUTPUT_VAR).append("%\r\n");
@@ -78,11 +78,26 @@ public final class BatchScriptBuilder {
         rem.append(remLine("quote=" + LaunchConfig.normalizeQuote(config.quote())));
         rem.append(remLine("reverse=" + config.reverseRows()));
         rem.append(remLine("pause=" + config.pauseAtEnd()));
+        rem.append(remLine("output-prefix=" + quoteEmpty(config.outputPrefix())));
+        rem.append(remLine("output-suffix=" + quoteEmpty(config.outputSuffix())));
         rem.append(remLine("input=%1 (drag and drop)"));
-        rem.append(remLine("output=%~dpn1_conv%~x1"));
+        rem.append(remLine("output=" + outputPathExpression(config)));
+        rem.append(remLine("output-example=" + config.outputNameExample("data", ".csv")));
         rem.append(remLine("cli-args=" + String.join(" ", config.toCliArgs())));
         rem.append("\r\n");
         return rem.toString();
+    }
+
+    /**
+     * {@code %~dp1}{@prefix}{@code %~n1}{@suffix}{@code %~x1}
+     * e.g. {@code C:\dir\pre_file_conv.csv}
+     */
+    static String outputPathExpression(LaunchConfig config) {
+        return "%~dp1" + config.outputPrefix() + "%~n1" + config.outputSuffix() + "%~x1";
+    }
+
+    private static String quoteEmpty(String value) {
+        return value.isEmpty() ? "(empty)" : value;
     }
 
     private static String remLine(String text) {

@@ -29,10 +29,15 @@ import java.awt.Insets;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Objects;
 
 public final class BatchBuilderFrame extends JFrame {
     private final JTextField jarField = new JTextField();
+    private final JTextField batNameField = new JTextField("run-csv-convert.bat");
+    private final JTextField outputPrefixField = new JTextField("");
+    private final JTextField outputSuffixField = new JTextField("_conv");
+    private final JLabel outputExampleLabel = new JLabel();
     private final JTextField columnsField = new JTextField();
     private final JTextField headerRowsField = new JTextField("1");
     private final JComboBox<String> encodingCombo = editableEncodingCombo();
@@ -100,6 +105,18 @@ public final class BatchBuilderFrame extends JFrame {
         c.gridx = 0;
         c.gridy = row;
         c.weightx = 0;
+        form.add(label("バッチファイル名"), c);
+        c.gridx = 1;
+        c.weightx = 1;
+        c.gridwidth = 2;
+        batNameField.setToolTipText("保存する .bat のファイル名。例: run-csv-convert.bat");
+        form.add(batNameField, c);
+        c.gridwidth = 1;
+        row++;
+
+        c.gridx = 0;
+        c.gridy = row;
+        c.weightx = 0;
         form.add(label("入力ファイル"), c);
         c.gridx = 1;
         c.weightx = 1;
@@ -112,10 +129,33 @@ public final class BatchBuilderFrame extends JFrame {
 
         c.gridx = 0;
         c.gridy = row;
+        form.add(label("出力プレフィックス"), c);
+        c.gridx = 1;
+        c.weightx = 1;
+        c.gridwidth = 2;
+        outputPrefixField.setToolTipText("入力ファイル名の前に付与。空欄可。例: out_");
+        form.add(outputPrefixField, c);
+        c.gridwidth = 1;
+        row++;
+
+        c.gridx = 0;
+        c.gridy = row;
+        form.add(label("出力サフィックス"), c);
+        c.gridx = 1;
+        c.weightx = 1;
+        c.gridwidth = 2;
+        outputSuffixField.setToolTipText("拡張子の前に付与。両方空なら _conv。例: _conv");
+        form.add(outputSuffixField, c);
+        c.gridwidth = 1;
+        row++;
+
+        c.gridx = 0;
+        c.gridy = row;
         form.add(label("出力ファイル"), c);
         c.gridx = 1;
         c.gridwidth = 2;
-        form.add(new JLabel("<入力名>_conv.<拡張子>  （例: data.csv → data_conv.csv）"), c);
+        outputExampleLabel.setToolTipText("プレフィックス + 入力名 + サフィックス + 拡張子（入力と同じフォルダ）");
+        form.add(outputExampleLabel, c);
         c.gridwidth = 1;
         row++;
 
@@ -263,6 +303,9 @@ public final class BatchBuilderFrame extends JFrame {
             }
         };
         jarField.getDocument().addDocumentListener(listener);
+        batNameField.getDocument().addDocumentListener(listener);
+        outputPrefixField.getDocument().addDocumentListener(listener);
+        outputSuffixField.getDocument().addDocumentListener(listener);
         columnsField.getDocument().addDocumentListener(listener);
         headerRowsField.getDocument().addDocumentListener(listener);
         customDelimiterField.getDocument().addDocumentListener(listener);
@@ -306,9 +349,11 @@ public final class BatchBuilderFrame extends JFrame {
         try {
             normalizeJarFieldDisplay();
             LaunchConfig config = currentConfig(BatchScriptBuilder.toBatRelativeJar(jarField.getText()));
+            outputExampleLabel.setText("例: data.csv → " + config.outputNameExample("data", ".csv"));
             previewArea.setText(builder.build(config));
             previewArea.setCaretPosition(0);
         } catch (RuntimeException ex) {
+            outputExampleLabel.setText("例: （設定エラー）");
             previewArea.setText("設定エラー: " + ex.getMessage());
         }
     }
@@ -345,19 +390,28 @@ public final class BatchBuilderFrame extends JFrame {
     }
 
     private void saveBatchFile() {
+        String batName;
+        try {
+            batName = normalizeBatFileName(batNameField.getText());
+            batNameField.setText(batName);
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "入力エラー", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         JFileChooser chooser = new JFileChooser(lastDirectory.toFile());
-        chooser.setDialogTitle("バッチファイルの保存先");
-        chooser.setSelectedFile(Path.of("run-csv-convert.bat").toFile());
+        chooser.setDialogTitle("バッチファイルの保存先フォルダ");
+        chooser.setSelectedFile(Path.of(batName).toFile());
         chooser.setFileFilter(new FileNameExtensionFilter("バッチファイル (*.bat)", "bat"));
         if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
 
-        Path target = chooser.getSelectedFile().toPath();
-        if (!target.getFileName().toString().toLowerCase().endsWith(".bat")) {
-            target = target.resolveSibling(target.getFileName() + ".bat");
-        }
-        lastDirectory = target.getParent() != null ? target.getParent() : lastDirectory;
+        Path chosen = chooser.getSelectedFile().toPath();
+        Path dir = chosen.getParent() != null ? chosen.getParent() : lastDirectory;
+        // Prefer the name typed in the form; keep the directory from the dialog.
+        Path target = dir.resolve(batName);
+        lastDirectory = dir;
 
         String relativeJar = resolveJarRelativeToBat(target);
         jarField.setText(relativeJar);
@@ -377,7 +431,7 @@ public final class BatchBuilderFrame extends JFrame {
                     this,
                     "保存しました:\n" + target
                             + "\n\n使い方: CSVファイルをこの bat にドラッグ＆ドロップしてください。"
-                            + "\n出力: <入力名>_conv.<拡張子>"
+                            + "\n出力例: " + config.outputNameExample("data", ".csv")
                             + "\nJAR: " + relativeJar + " （bat と同じ基準の相対パス）",
                     "完了",
                     JOptionPane.INFORMATION_MESSAGE
@@ -385,6 +439,27 @@ public final class BatchBuilderFrame extends JFrame {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "保存に失敗しました:\n" + ex.getMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    static String normalizeBatFileName(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("バッチファイル名を入力してください。");
+        }
+        String name = value.strip().replace('/', '\\');
+        int slash = Math.max(name.lastIndexOf('\\'), name.lastIndexOf('/'));
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        if (name.isBlank() || name.equals(".") || name.equals("..")) {
+            throw new IllegalArgumentException("バッチファイル名が不正です: " + value);
+        }
+        if (name.chars().anyMatch(ch -> "<>:\"|?*".indexOf(ch) >= 0)) {
+            throw new IllegalArgumentException("バッチファイル名に使えません: < > : \" | ? *");
+        }
+        if (!name.toLowerCase(Locale.ROOT).endsWith(".bat")) {
+            name = name + ".bat";
+        }
+        return name;
     }
 
     private String resolveJarRelativeToBat(Path batFile) {
@@ -421,6 +496,8 @@ public final class BatchBuilderFrame extends JFrame {
                 outputEncoding,
                 selectedDelimiter(),
                 selectedQuote(),
+                outputPrefixField.getText(),
+                outputSuffixField.getText(),
                 reverseCheck.isSelected(),
                 pauseCheck.isSelected()
         );

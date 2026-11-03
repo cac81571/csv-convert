@@ -6,6 +6,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LaunchConfigTest {
     @Test
@@ -19,10 +20,13 @@ class LaunchConfigTest {
                 "",
                 ",",
                 "\"",
+                "",
+                "_conv",
                 false,
                 true
         );
         assertEquals(List.of("-c", "name,city"), config.toCliArgs());
+        assertEquals("data_conv.csv", config.outputNameExample("data", ".csv"));
     }
 
     @Test
@@ -36,6 +40,8 @@ class LaunchConfigTest {
                 "UTF-8",
                 "\t",
                 "'",
+                "out_",
+                "_done",
                 true,
                 false
         );
@@ -51,6 +57,45 @@ class LaunchConfigTest {
                 ),
                 config.toCliArgs()
         );
+        assertEquals("out_data_done.csv", config.outputNameExample("data", ".csv"));
+    }
+
+    @Test
+    void defaultsSuffixWhenPrefixAndSuffixBlank() {
+        LaunchConfig config = new LaunchConfig(
+                "app.jar",
+                "",
+                1,
+                "UTF-8",
+                "",
+                "",
+                ",",
+                "\"",
+                "",
+                "",
+                false,
+                true
+        );
+        assertEquals("_conv", config.outputSuffix());
+        assertEquals("", config.outputPrefix());
+    }
+
+    @Test
+    void rejectsUnsafeOutputNameParts() {
+        assertThrows(CsvConvertException.class, () -> new LaunchConfig(
+                "app.jar",
+                "",
+                1,
+                "UTF-8",
+                "",
+                "",
+                ",",
+                "\"",
+                "a/b",
+                "_conv",
+                false,
+                true
+        ));
     }
 
     @Test

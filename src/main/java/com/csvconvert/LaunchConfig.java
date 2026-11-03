@@ -3,11 +3,12 @@ package com.csvconvert;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * Parameters used to generate a Windows batch launcher for the CLI.
  * Input/output paths are not stored here; the generated bat takes the input
- * as {@code %1} and writes {@code <name>_conv.<ext>}.
+ * as {@code %1} and writes {@code <prefix><name><suffix>.<ext>}.
  */
 public record LaunchConfig(
         String jarPath,
@@ -18,9 +19,13 @@ public record LaunchConfig(
         String outputEncoding,
         String delimiter,
         String quote,
+        String outputPrefix,
+        String outputSuffix,
         boolean reverseRows,
         boolean pauseAtEnd
 ) {
+    private static final Pattern UNSAFE_NAME_CHARS = Pattern.compile("[\\\\/:*?\"<>|&^%!\\r\\n\\t]");
+
     public LaunchConfig {
         jarPath = BatchScriptBuilder.toBatRelativeJar(jarPath);
         columns = nullToEmpty(columns);
@@ -29,6 +34,11 @@ public record LaunchConfig(
         outputEncoding = nullToEmpty(outputEncoding);
         delimiter = keepDelimiter(delimiter);
         quote = keepQuote(quote);
+        outputPrefix = sanitizeNamePart(outputPrefix);
+        outputSuffix = sanitizeNamePart(outputSuffix);
+        if (outputPrefix.isEmpty() && outputSuffix.isEmpty()) {
+            outputSuffix = "_conv";
+        }
         if (headerRows < 0) {
             throw new CsvConvertException("ヘッダ行数は0以上で指定してください: " + headerRows);
         }
@@ -44,9 +54,16 @@ public record LaunchConfig(
                 "",
                 ",",
                 "\"",
+                "",
+                "_conv",
                 false,
                 true
         );
+    }
+
+    /** Example: {@code data.csv} with prefix {@code pre_} and suffix {@code _out} → {@code pre_data_out.csv}. */
+    public String outputNameExample(String sampleBaseName, String sampleExtension) {
+        return outputPrefix + sampleBaseName + outputSuffix + sampleExtension;
     }
 
     /** CLI options only (no input/output positional arguments). */
@@ -119,6 +136,18 @@ public record LaunchConfig(
             case "" -> "NONE";
             default -> token;
         };
+    }
+
+    static String sanitizeNamePart(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        String cleaned = UNSAFE_NAME_CHARS.matcher(value).replaceAll("");
+        if (!cleaned.equals(value)) {
+            throw new CsvConvertException(
+                    "出力プレフィックス/サフィックスに使えません: \\ / : * ? \" < > | & ^ % ! および改行・タブ");
+        }
+        return value;
     }
 
     private static String nullToEmpty(String value) {
