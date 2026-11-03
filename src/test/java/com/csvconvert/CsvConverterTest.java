@@ -31,7 +31,8 @@ class CsvConverterTest {
                 StandardCharsets.UTF_8,
                 ',',
                 '"',
-                1
+                1,
+                true
         ));
 
         assertEquals("""
@@ -39,6 +40,25 @@ class CsvConverterTest {
                 Carol,Fukuoka
                 Bob,Osaka
                 Alice,Tokyo
+                """, actual);
+    }
+
+    @Test
+    void keepsOriginalOrderWhenReverseDisabled() {
+        String actual = convert(PEOPLE, new ConvertOptions(
+                List.of("name", "city"),
+                StandardCharsets.UTF_8,
+                StandardCharsets.UTF_8,
+                ',',
+                '"',
+                1,
+                false
+        ));
+        assertEquals("""
+                name,city
+                Alice,Tokyo
+                Bob,Osaka
+                Carol,Fukuoka
                 """, actual);
     }
 
@@ -77,7 +97,8 @@ class CsvConverterTest {
                 StandardCharsets.UTF_8,
                 ';',
                 '"',
-                1
+                1,
+                true
         ));
         assertEquals("""
                 note;name
@@ -100,7 +121,8 @@ class CsvConverterTest {
                 shiftJis,
                 ',',
                 '"',
-                1
+                1,
+                true
         );
         byte[] output = convertBytes(input.getBytes(shiftJis), options);
         assertEquals("""
@@ -141,7 +163,8 @@ class CsvConverterTest {
                 StandardCharsets.UTF_8,
                 ',',
                 '"',
-                0
+                0,
+                true
         ));
         assertEquals("""
                 Carol
@@ -159,7 +182,8 @@ class CsvConverterTest {
                 StandardCharsets.UTF_8,
                 '\t',
                 '\'',
-                1
+                1,
+                true
         ));
         assertEquals("""
                 name
@@ -214,7 +238,8 @@ class CsvConverterTest {
                 StandardCharsets.UTF_8,
                 ',',
                 '"',
-                2
+                2,
+                true
         ));
         assertEquals("""
                 部門,部門
@@ -239,7 +264,8 @@ class CsvConverterTest {
                 StandardCharsets.UTF_8,
                 ',',
                 '"',
-                -1
+                -1,
+                true
         ));
     }
 
@@ -248,7 +274,7 @@ class CsvConverterTest {
     }
 
     private static ConvertOptions options(List<String> columns, int headerRows) {
-        return new ConvertOptions(columns, StandardCharsets.UTF_8, StandardCharsets.UTF_8, ',', '"', headerRows);
+        return new ConvertOptions(columns, StandardCharsets.UTF_8, StandardCharsets.UTF_8, ',', '"', headerRows, true);
     }
 
     private static String convert(String csv, ConvertOptions options) {

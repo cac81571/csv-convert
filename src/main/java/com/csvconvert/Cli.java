@@ -18,7 +18,7 @@ import java.util.concurrent.Callable;
         mixinStandardHelpOptions = true,
         version = "csv-convert 1.0.0",
         description = {
-                "CSVの対象カラムを抽出し、指定したヘッダ行を除いてデータの並び順を逆にします。",
+                "CSVの対象カラムを抽出します。デフォルトは元の並びのままです（--reverse で逆順）。",
                 "カラム名は最後のヘッダ行から解決します。番号指定は1始まりです（例: 1,3 や #1,#3）。"
         }
 )
@@ -74,6 +74,13 @@ public class Cli implements Callable<Integer> {
     int headerRows = 1;
 
     @Option(
+            names = {"--reverse"},
+            negatable = true,
+            description = "ヘッダ以外のデータ行を逆順にする。デフォルト: ${DEFAULT-VALUE}。"
+    )
+    boolean reverse = false;
+
+    @Option(
             names = {"-o", "--output"},
             paramLabel = "<file>",
             description = "出力ファイル。省略時は標準出力、または第2引数。"
@@ -97,6 +104,7 @@ public class Cli implements Callable<Integer> {
     Path positionalOutput;
 
     public static void main(String[] args) {
+        ConsoleEncoding.install();
         System.exit(commandLine().execute(args));
     }
 
@@ -116,7 +124,8 @@ public class Cli implements Callable<Integer> {
                 CsvChars.parseCharset(outputEncoding != null ? outputEncoding : encoding),
                 CsvChars.parseDelimiter(delimiter),
                 CsvChars.parseQuote(quote),
-                headerRows
+                headerRows,
+                reverse
         );
 
         Path outputPath = positionalOutput != null ? positionalOutput : output;

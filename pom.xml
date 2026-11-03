@@ -15,6 +15,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <commons-csv.version>1.14.1</commons-csv.version>
         <picocli.version>4.7.7</picocli.version>
+        <flatlaf.version>3.7.2</flatlaf.version>
         <junit.version>5.11.4</junit.version>
     </properties>
 
@@ -28,6 +29,11 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>${flatlaf.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

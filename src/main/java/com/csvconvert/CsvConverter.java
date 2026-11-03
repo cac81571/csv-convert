@@ -36,7 +36,9 @@ public final class CsvConverter {
             List<CSVRecord> headerRows = List.copyOf(allRows.subList(0, headerCount));
             List<CSVRecord> dataRows = new ArrayList<>(allRows.subList(headerCount, allRows.size()));
             ColumnSelection selection = ColumnSelection.resolve(headerRows, dataRows, options);
-            Collections.reverse(dataRows);
+            if (options.reverseRows()) {
+                Collections.reverse(dataRows);
+            }
 
             try (CSVPrinter printer = new CSVPrinter(uncloseable(writer), options.csvFormat())) {
                 for (CSVRecord row : headerRows) {

@@ -14,7 +14,8 @@ public record ConvertOptions(
         Charset outputEncoding,
         char delimiter,
         Character quote,
-        int headerRows
+        int headerRows,
+        boolean reverseRows
 ) {
     public static final ConvertOptions DEFAULT = new ConvertOptions(
             List.of(),
@@ -22,7 +23,8 @@ public record ConvertOptions(
             StandardCharsets.UTF_8,
             ',',
             '"',
-            1
+            1,
+            false
     );
 
     public ConvertOptions {

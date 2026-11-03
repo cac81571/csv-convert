@@ -24,6 +24,7 @@ class CliTest {
 
         int code = Cli.commandLine().execute(
                 "-c", "name,city",
+                "--reverse",
                 input.toString(),
                 output.toString()
         );
@@ -49,6 +50,7 @@ class CliTest {
                 "-e", "MS932",
                 "-d", "TAB",
                 "-q", "SINGLE",
+                "--reverse",
                 "-o", output.toString(),
                 input.toString()
         );
@@ -81,6 +83,7 @@ class CliTest {
         int code = Cli.commandLine().execute(
                 "-c", "name,city",
                 "-H", "2",
+                "--reverse",
                 input.toString(),
                 output.toString()
         );
@@ -106,6 +109,7 @@ class CliTest {
         int code = Cli.commandLine().execute(
                 "-c", "2",
                 "--header-rows", "0",
+                "--reverse",
                 input.toString(),
                 output.toString()
         );
